@@ -1,0 +1,12 @@
+.plant-entity-list-item:hover {
+  background-color: var(--color-element-light) !important;
+  cursor: pointer;
+}
+
+.plant-entity-list {
+  margin-top: 1rem;
+}
+
+.plant-entity-list-empty {
+  margin-top: 1rem;
+}

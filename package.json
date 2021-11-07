@@ -1,5 +1,5 @@
 {
-  "name": "sidebar-create-plant",
+  "name": "sidebar-plants",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -24,7 +24,7 @@
   },
   "scripts": {
     "start": "cross-env BROWSER=none react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && rimraf docs && ncp build docs",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -43,5 +43,9 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "."
+  "homepage": ".",
+  "devDependencies": {
+    "ncp": "^2.0.0",
+    "rimraf": "^3.0.2"
+  }
 }
