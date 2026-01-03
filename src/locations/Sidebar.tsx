@@ -1,4 +1,4 @@
-import type { SidebarAppSDK } from '@contentful/app-sdk';
+import type { EntryFieldAPI, SidebarAppSDK } from '@contentful/app-sdk';
 import {
   Button,
   EntityList,
@@ -9,6 +9,8 @@ import { PlusIcon } from '@contentful/f36-icons';
 import { useSDK } from '@contentful/react-apps-toolkit';
 import { useEffect, useMemo, useState } from 'react';
 import './Sidebar.css';
+import { t } from '@lingui/core/macro';
+import { Plural, Trans } from '@lingui/react/macro';
 
 type Plant = {
   id: string;
@@ -21,26 +23,24 @@ function generatePaddedNumber(n: number): string {
   return n.toString().padStart(CODE_NUMBER_LENGTH, '0');
 }
 
+function getCode(field: EntryFieldAPI) {
+  return ((field.getValue() as string) ?? '').slice(0, 2).toUpperCase();
+}
+
 const Sidebar = () => {
   const sdk = useSDK<SidebarAppSDK>();
-  const entry = useMemo(() => sdk.entry, [sdk]);
-  const sys = useMemo(() => entry.getSys(), [entry]);
-  const [isPublished, setIsPublished] = useState<boolean>(!!sys.publishedAt);
-  const genus = useMemo(
-    () => (entry.fields.genus.getValue() as string) ?? '',
-    [entry],
-  );
-  const species = useMemo(
-    () => (entry.fields.species.getValue() as string) ?? '',
-    [entry],
-  );
-  const [isCreatingPlant, setIsCreatingPlant] = useState<boolean>(false);
-  const codeStart = useMemo(
-    () => (genus.slice(0, 2) + species.slice(0, 2)).toUpperCase(),
-    [genus, species],
-  );
-  const [plants, setPlants] = useState<Plant[]>([]);
   const cma = sdk.cma;
+  const entry = sdk.entry;
+  const sys = entry.getSys();
+
+  const genusField = entry.fields.genus;
+  const speciesField = entry.fields.species;
+
+  const [isPublished, setIsPublished] = useState<boolean>(!!sys.publishedAt);
+  const [isCreatingPlant, setIsCreatingPlant] = useState<boolean>(false);
+  const [genusCode, setGenusCode] = useState<string>(getCode(genusField));
+  const [speciesCode, setSpeciesCode] = useState<string>(getCode(speciesField));
+  const [plants, setPlants] = useState<Plant[]>([]);
 
   useEffect(() => {
     const detach = entry.onSysChanged((sys) =>
@@ -57,6 +57,25 @@ const Sidebar = () => {
       sdk.window.stopAutoResizer();
     };
   }, [sdk]);
+
+  useEffect(() => {
+    const detach = genusField.onValueChanged(() =>
+      setGenusCode(getCode(genusField)),
+    );
+    return () => detach();
+  }, [genusField]);
+
+  useEffect(() => {
+    const detach = speciesField.onValueChanged(() =>
+      setSpeciesCode(getCode(speciesField)),
+    );
+    return () => detach();
+  }, [speciesField]);
+
+  const codeStart = useMemo(
+    () => `${genusCode}${speciesCode}`,
+    [genusCode, speciesCode],
+  );
 
   useEffect(() => {
     (async () => {
@@ -142,9 +161,9 @@ const Sidebar = () => {
         { id: newPlant.sys.id, code: newPlant.fields.code.fr },
       ]);
 
-      sdk.notifier.success(`Plant ${newPlant.fields.code.fr} created!`);
+      sdk.notifier.success(t`Plant ${newPlant.fields.code.fr} created!`);
     } catch (_e) {
-      sdk.notifier.error(`Could not create a new plant :(`);
+      sdk.notifier.error(t`Could not create a new plant :(`);
     }
 
     setIsCreatingPlant(false);
@@ -162,36 +181,41 @@ const Sidebar = () => {
             isDisabled={isCreatingPlant}
             onClick={() => createNewPlant()}
           >
-            {isCreatingPlant ? 'Creating' : 'Create'} new <b>{codeStart}</b>
+            {isCreatingPlant ? (
+              <Trans>
+                Creating new <b>{codeStart}</b>
+              </Trans>
+            ) : (
+              <Trans>
+                Create new <b>{codeStart}</b>
+              </Trans>
+            )}
           </Button>
-          {plants.length > 0 ? (
-            <>
-              <EntityList>
-                {plants.map((p) => (
-                  <EntityList.Item
-                    key={p.id}
-                    title={p.code}
-                    withThumbnail={false}
-                    onClick={() =>
-                      sdk.navigator.openEntry(p.id, { slideIn: true })
-                    }
-                    className="plant-entity-list-item"
-                  />
-                ))}
-              </EntityList>
-              <Paragraph>
-                {plants.length} plants are linked to this plant card
-              </Paragraph>
-            </>
-          ) : (
-            <Paragraph>
-              No plants for this entry.
-            </Paragraph>
-          )}
+          <EntityList>
+            {plants.map((p) => (
+              <EntityList.Item
+                key={p.id}
+                title={p.code}
+                withThumbnail={false}
+                onClick={() => sdk.navigator.openEntry(p.id, { slideIn: true })}
+                className="plant-entity-list-item"
+              />
+            ))}
+          </EntityList>
+          <Paragraph>
+            <Plural
+              value={plants.length}
+              _0="No plant for this plant card"
+              one="# plant is linked to this plant card"
+              other="# plants are linked to this plant card"
+            />
+          </Paragraph>
         </div>
       ) : (
         <Note variant="warning">
-          Cannot create a plant until this entry is <b>published</b>
+          <Trans>
+            Cannot create a plant until this plant card is <b>published</b>
+          </Trans>
         </Note>
       )}
     </div>
